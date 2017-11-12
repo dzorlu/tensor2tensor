@@ -543,8 +543,9 @@ def transformer_decoder(decoder_input,
           with tf.variable_scope("encdec_attention"):
             # TODO(llion): Add caching.
             y = common_attention.multihead_attention(
-                common_layers.layer_preprocess(
-                    x, hparams), encoder_output, encoder_decoder_attention_bias,
+                common_layers.layer_preprocess(x, hparams),
+                encoder_output,
+                encoder_decoder_attention_bias,
                 hparams.attention_key_channels or hparams.hidden_size,
                 hparams.attention_value_channels or hparams.hidden_size,
                 hparams.hidden_size,

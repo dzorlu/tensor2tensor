@@ -923,11 +923,11 @@ def dot_product_attention(q,
     make_image_summary: True if you want an image summary.
 
   Returns:
-    A Tensor.
+    A Tensor. [batch, heads, length_q, depth_v]
   """
   with tf.variable_scope(
       name, default_name="dot_product_attention", values=[q, k, v]):
-    # [batch, num_heads, query_length, memory_length]
+    # [batch, num_heads, query_length <length_q>, memory_length <length_kv>]
     logits = tf.matmul(q, k, transpose_b=True)
     if bias is not None:
       logits += bias
@@ -1751,7 +1751,7 @@ def compute_qkv(query_antecedent, memory_antecedent, total_key_depth,
     memory_antecedent: a Tensor with shape [batch, length_m, channels]
     total_key_depth: an integer
     total_value_depth: and integer
-    q_filter_width: An integer specifying how wide you want the query to be.
+    q_filter_width <kernel_size>: An integer specifying how wide you want the query to be.
     kv_filter_width: An integer specifying how wide you want the keys and values
     to be.
     q_padding: One of "VALID", "SAME" or "LEFT". Default is VALID: No padding.
@@ -1765,7 +1765,7 @@ def compute_qkv(query_antecedent, memory_antecedent, total_key_depth,
     combined = common_layers.conv1d(
         query_antecedent,
         total_key_depth * 2 + total_value_depth,
-        1,
+        kernel_size=1,
         name="qkv_transform")
     q, k, v = tf.split(
         combined, [total_key_depth, total_key_depth, total_value_depth],
@@ -1777,13 +1777,13 @@ def compute_qkv(query_antecedent, memory_antecedent, total_key_depth,
     q = common_layers.conv1d(
         query_antecedent,
         total_key_depth,
-        q_filter_width,
+        kernel_size=q_filter_width,
         padding=q_padding,
         name="q_transform")
     kv_combined = common_layers.conv1d(
         query_antecedent,
         total_key_depth + total_value_depth,
-        kv_filter_width,
+        kernel_size=kv_filter_width,
         padding=kv_padding,
         name="kv_transform")
     k, v = tf.split(kv_combined, [total_key_depth, total_value_depth],
@@ -1797,7 +1797,7 @@ def compute_qkv(query_antecedent, memory_antecedent, total_key_depth,
   combined = common_layers.conv1d(
       memory_antecedent,
       total_key_depth + total_value_depth,
-      1,
+      kernel_size=1,
       padding=kv_padding,
       name="kv_transform")
   k, v = tf.split(combined, [total_key_depth, total_value_depth], axis=2)
@@ -1982,6 +1982,7 @@ def multihead_attention(query_antecedent,
                                     gap_size,
                                     num_memory_blocks)
     x = combine_heads(x)
+    # always scale it back to hidden_size
     x = common_layers.conv1d(x, output_depth, 1, name="output_transform")
     if additional_returned_value is not None:
       return x, additional_returned_value
